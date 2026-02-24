@@ -26,6 +26,11 @@ rode o script de instalação
 ### Como acessar o Home Server?
 O home server a principio fica acessavel somente para dispositivos conectados a sua rede
 
+subindo o container do docker-compose Homarr
+```
+docker compose up -d
+```
+
 descubra o ip do servidor
 ```bash
 ip a
