@@ -18,23 +18,17 @@
 # sudo apt update && sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
 SECRET_ENCRYPTION_KEY=$(openssl rand -hex 32)
-DB_PASSWORD=$(openssl rand -hex 16)
-POSTGRES_PASSWORD=$(openssl rand -hex 16)
-WEBPASSWORD=$(openssl rand -hex 16)
+NEXTCLOUD_POSTGRES_PASSWORD=$(openssl rand -hex 32)
 
 cat > .env <<EOF
-SECRET_ENCRYPTION_KEY=$SECRET_ENCRYPTION_KEY
-DB_HOSTNAME=immich-db
-DB_USERNAME=admin
-DB_PASSWORD=$DB_PASSWORD
-DB_DATABASE_NAME=imagens
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-POSTGRES_DB=imagens
+# PADRAO DE VARIÁVEIS DE AMBIENTE PARA O DOCKER-COMPOSE
 TZ=America/Sao_Paulo
-WEBPASSWORD=$WEBPASSWORD
-PUID=1000
-PGID=1000
+
+#HOMARR
+HOMARR_SECRET_KEY=$SECRET_ENCRYPTION_KEY
+
+#NEXTCLOUD
+NEXTCLOUD_POSTGRES_PASSWORD=$NEXTCLOUD_POSTGRES_PASSWORD
 EOF
 
 cat > docker-compose.yml <<EOF
@@ -50,7 +44,7 @@ cat > docker-compose.yml <<EOF
 # - Immich
 # - PiHole
 # - WireGuard VPN
-# - Nginx Proxy Manager
+# - Nginx Proxy Manager 
 # - Duplicati Backup
 # - Gitea
 # Configurações de recursos e logging otimizados para desempenho e estabilidade
@@ -63,12 +57,14 @@ cat > docker-compose.yml <<EOF
 
 networks:
   homelab:
+    name: virtual_LAN_homelab
     driver: bridge
 
 x-defaults: &defaults
   restart: unless-stopped
+
   networks:
-    - homelab
+    - homelab      
 
   env_file:
     - .env
@@ -89,11 +85,15 @@ services:
     container_name: homarr
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./homarr/appdata:/appdata
+      - ./data/homarr:/appdata
+
+    environment:
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_KEY}
+
     ports:
       - "7575:7575"
     mem_limit: 512MB
-    cpus: '0.5'
+    cpus: '1.0'
 
 # PORTAINER
   portainer:
@@ -102,23 +102,33 @@ services:
     container_name: portainer
     ports:
       - "9000:9000"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer:/data
-    mem_limit: 256MB
-    cpus: '0.5'
+      - ./data/portainer:/data
+    
+    environment:
+      TZ: ${TZ}
 
-# UPTIME KUMA
+    mem_limit: 512MB
+    cpus: '1.0'
+
+# # UPTIME KUMA
   uptime-kuma:
     <<: *defaults
     image: louislam/uptime-kuma:2-slim
     container_name: uptime-kuma
     ports:
       - "3001:3001"
+
     volumes:
-      - ./uptime-kuma:/app/data
+      - ./data/uptime-kuma:/app/data
+    
+    environment:
+      TZ: ${TZ}
+
     mem_limit: 256MB
-    cpus: '0.5'
+    cpus: '1.0'
 
 # NEXTCLOUD
   nextcloud:
@@ -126,123 +136,161 @@ services:
     image: nextcloud:32.0.6
     container_name: nextcloud
     ports:
-      - "8080:80"
-    volumes:
-      - ./nextcloud:/var/www/html
-    mem_limit: 512MB
-    cpus: '1.0'
+      - "8080:8080"
 
-# JELLYFIN
-  jellyfin:
-    <<: *defaults
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
-    ports:
-      - "8096:8096"
     volumes:
-      - ./jellyfin/config:/config
-      - ./media:/media  
-    mem_limit: 1024MB
-    cpus: '1.0'
+      - ./data/nextcloud/html:/var/www/html
+      - ./data/nextcloud/data:/var/www/html/data
+      - ./data/nextcloud/custom_apps:/var/www/html/custom_apps
+      - ./data/nextcloud/config:/var/www/html/config
+    
+    environment:
+      TZ: ${TZ}
+      REDIS_HOST: redis_nextcloud
+      POSTGRES_HOST: postgres_nextcloud
+      POSTGRES_DB: db_nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_POSTGRES_PASSWORD}
 
-# IMMICH
-  immich-server:
-    <<: *defaults
-    image: ghcr.io/immich-app/immich-server
-    container_name: immich
-    ports:
-      - "2283:2283"
-    volumes:
-      - ./immich:/usr/src/app/upload
+    mem_limit: 1GB
+    cpus: '1.0'
     depends_on:
-      - immich-db
-    mem_limit: 512MB
-    cpus: '1.0'
-
-  immich-db:
+      - redis_nextcloud
+      - postgres_nextcloud
+    
+  # -> REDIS do Nextcloud para cache e fila de tarefas
+  redis:
     <<: *defaults
-    image: postgres:14
-    container_name: immich-db
-    volumes:
-      - ./immich/immich-db:/var/lib/postgresql/data
+    container_name: redis_nextcloud
+    image: redis:alpine
     mem_limit: 256MB
-    cpus: '0.5'
-
-# PIHOLE
-  pihole:
+    cpus: '1.0'
+    
+  # -> Postgres do Nextcloud para banco de dados
+  postgres:
     <<: *defaults
-    image: pihole/pihole:2026.02.0
-    container_name: pihole
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "8081:80"
+    container_name: postgres_nextcloud
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: db_nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_POSTGRES_PASSWORD}
+      
     volumes:
-      - ./pihole:/etc/pihole
-    mem_limit: 256MB
-    cpus: '0.5'
-
-# WIREGUARD VPN
-  wireguard:
-    <<: *defaults
-    image: linuxserver/wireguard:amd64-latest
-    container_name: wireguard
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "51820:51820/udp"
-    volumes:
-      - ./wireguard:/config
-    mem_limit: 256MB
-    cpus: '0.5'
-
-# NGINX PROXY MANAGER
-  npm:
-    <<: *defaults
-    image: jc21/nginx-proxy-manager:2
-    container_name: nginx-proxy
-    ports:
-      - "80:80"
-      - "81:81"
-      - "443:443"
-    volumes:
-      - ./nginx:/data
-      - ./letsencrypt:/etc/letsencrypt
+      - ./data/nextcloud/postgres_nextcloud:/var/lib/postgresql/data
+    
     mem_limit: 512MB
     cpus: '1.0'
 
-# DUPLICATI BACKUP
-  duplicati:
-    <<: *defaults
-    image: lscr.io/linuxserver/duplicati:amd64-2.2.0
-    container_name: duplicati
-    ports:
-      - "8200:8200"
-    volumes:
-      - ./duplicati:/config
-      - ./backups:/backups
-      - ./media:/source
-    mem_limit: 512MB
-    cpus: '1.0'
 
-# GITEA
-  gitea:
-    <<: *defaults
-    image: gitea/gitea:1
-    container_name: gitea
-    ports:
-      - "3000:3000"
-      - "2222:22"
-    volumes:
-      - ./gitea:/data
-    mem_limit: 512MB
-    cpus: '1.0'
+# # JELLYFIN
+#   jellyfin:
+#     <<: *defaults
+#     image: jellyfin/jellyfin:latest
+#     container_name: jellyfin
+#     ports:
+#       - "8096:8096"
+#     volumes:
+#       - ./jellyfin/config:/config
+#       - ./media:/media  
+#     mem_limit: 1024MB
+#     cpus: '1.0'
+
+# # IMMICH
+#   immich-server:
+#     <<: *defaults
+#     image: ghcr.io/immich-app/immich-server
+#     container_name: immich
+#     ports:
+#       - "2283:2283"
+#     volumes:
+#       - ./immich:/usr/src/app/upload
+#     depends_on:
+#       - immich-db
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+#   immich-db:
+#     <<: *defaults
+#     image: postgres:14
+#     container_name: immich-db
+#     volumes:
+#       - ./immich/immich-db:/var/lib/postgresql/data
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # PIHOLE
+#   pihole:
+#     <<: *defaults
+#     image: pihole/pihole:2026.02.0
+#     container_name: pihole
+#     ports:
+#       - "53:53/tcp"
+#       - "53:53/udp"
+#       - "8081:80"
+#     volumes:
+#       - ./pihole:/etc/pihole
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # WIREGUARD VPN
+#   wireguard:
+#     <<: *defaults
+#     image: linuxserver/wireguard:amd64-latest
+#     container_name: wireguard
+#     cap_add:
+#       - NET_ADMIN
+#     ports:
+#       - "51820:51820/udp"
+#     volumes:
+#       - ./wireguard:/config
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # NGINX PROXY MANAGER
+#   npm:
+#     <<: *defaults
+#     image: jc21/nginx-proxy-manager:2
+#     container_name: nginx-proxy
+#     ports:
+#       - "80:80"
+#       - "81:81"
+#       - "443:443"
+#     volumes:
+#       - ./nginx:/data
+#       - ./letsencrypt:/etc/letsencrypt
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+# # DUPLICATI BACKUP
+#   duplicati:
+#     <<: *defaults
+#     image: lscr.io/linuxserver/duplicati:amd64-2.2.0
+#     container_name: duplicati
+#     ports:
+#       - "8200:8200"
+#     volumes:
+#       - ./duplicati:/config
+#       - ./backups:/backups
+#       - ./media:/source
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+# # GITEA
+#   gitea:
+#     <<: *defaults
+#     image: gitea/gitea:1
+#     container_name: gitea
+#     ports:
+#       - "3000:3000"
+#       - "2222:22"
+#     volumes:
+#       - ./gitea:/data
+#     mem_limit: 512MB
+#     cpus: '1.0'
 EOF
 
 cat > rebuild-docker-compose.sh <<EOF
-#!/bin/bash
-rm -rf docker-compose.yml
-cat > docker-compose.yml <<EOL
 # Docker Compose para Home Lab - Configurações otimizadas e atualizadas
 # Feito por: Guilherme de Souza
 
@@ -255,7 +303,7 @@ cat > docker-compose.yml <<EOL
 # - Immich
 # - PiHole
 # - WireGuard VPN
-# - Nginx Proxy Manager
+# - Nginx Proxy Manager 
 # - Duplicati Backup
 # - Gitea
 # Configurações de recursos e logging otimizados para desempenho e estabilidade
@@ -268,12 +316,14 @@ cat > docker-compose.yml <<EOL
 
 networks:
   homelab:
+    name: virtual_LAN_homelab
     driver: bridge
 
 x-defaults: &defaults
   restart: unless-stopped
+
   networks:
-    - homelab
+    - homelab      
 
   env_file:
     - .env
@@ -294,11 +344,15 @@ services:
     container_name: homarr
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./homarr/appdata:/appdata
+      - ./data/homarr:/appdata
+
+    environment:
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_KEY}
+
     ports:
       - "7575:7575"
     mem_limit: 512MB
-    cpus: '0.5'
+    cpus: '1.0'
 
 # PORTAINER
   portainer:
@@ -307,23 +361,33 @@ services:
     container_name: portainer
     ports:
       - "9000:9000"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer:/data
-    mem_limit: 256MB
-    cpus: '0.5'
+      - ./data/portainer:/data
+    
+    environment:
+      TZ: ${TZ}
 
-# UPTIME KUMA
+    mem_limit: 512MB
+    cpus: '1.0'
+
+# # UPTIME KUMA
   uptime-kuma:
     <<: *defaults
     image: louislam/uptime-kuma:2-slim
     container_name: uptime-kuma
     ports:
       - "3001:3001"
+
     volumes:
-      - ./uptime-kuma:/app/data
+      - ./data/uptime-kuma:/app/data
+    
+    environment:
+      TZ: ${TZ}
+
     mem_limit: 256MB
-    cpus: '0.5'
+    cpus: '1.0'
 
 # NEXTCLOUD
   nextcloud:
@@ -331,117 +395,158 @@ services:
     image: nextcloud:32.0.6
     container_name: nextcloud
     ports:
-      - "8080:80"
-    volumes:
-      - ./nextcloud:/var/www/html
-    mem_limit: 512MB
-    cpus: '1.0'
+      - "8080:8080"
 
-# JELLYFIN
-  jellyfin:
-    <<: *defaults
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
-    ports:
-      - "8096:8096"
     volumes:
-      - ./jellyfin/config:/config
-      - ./media:/media  
-    mem_limit: 1024MB
-    cpus: '1.0'
+      - ./data/nextcloud/html:/var/www/html
+      - ./data/nextcloud/data:/var/www/html/data
+      - ./data/nextcloud/custom_apps:/var/www/html/custom_apps
+      - ./data/nextcloud/config:/var/www/html/config
+    
+    environment:
+      TZ: ${TZ}
+      REDIS_HOST: redis_nextcloud
+      POSTGRES_HOST: postgres_nextcloud
+      POSTGRES_DB: db_nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_POSTGRES_PASSWORD}
 
-# IMMICH
-  immich-server:
-    <<: *defaults
-    image: ghcr.io/immich-app/immich-server
-    container_name: immich
-    ports:
-      - "2283:2283"
-    volumes:
-      - ./immich:/usr/src/app/upload
+    mem_limit: 1GB
+    cpus: '1.0'
     depends_on:
-      - immich-db
-    mem_limit: 512MB
-    cpus: '1.0'
-
-  immich-db:
+      - redis_nextcloud
+      - postgres_nextcloud
+    
+  # -> REDIS do Nextcloud para cache e fila de tarefas
+  redis:
     <<: *defaults
-    image: postgres:14
-    container_name: immich-db
-    volumes:
-      - ./immich/immich-db:/var/lib/postgresql/data
+    container_name: redis_nextcloud
+    image: redis:alpine
     mem_limit: 256MB
-    cpus: '0.5'
-
-# PIHOLE
-  pihole:
+    cpus: '1.0'
+    
+  # -> Postgres do Nextcloud para banco de dados
+  postgres:
     <<: *defaults
-    image: pihole/pihole:2026.02.0
-    container_name: pihole
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "8081:80"
+    container_name: postgres_nextcloud
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: db_nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_POSTGRES_PASSWORD}
+      
     volumes:
-      - ./pihole:/etc/pihole
-    mem_limit: 256MB
-    cpus: '0.5'
-
-# WIREGUARD VPN
-  wireguard:
-    <<: *defaults
-    image: linuxserver/wireguard:amd64-latest
-    container_name: wireguard
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "51820:51820/udp"
-    volumes:
-      - ./wireguard:/config
-    mem_limit: 256MB
-    cpus: '0.5'
-
-# NGINX PROXY MANAGER
-  npm:
-    <<: *defaults
-    image: jc21/nginx-proxy-manager:2
-    container_name: nginx-proxy
-    ports:
-      - "80:80"
-      - "81:81"
-      - "443:443"
-    volumes:
-      - ./nginx:/data
-      - ./letsencrypt:/etc/letsencrypt
+      - ./data/nextcloud/postgres_nextcloud:/var/lib/postgresql/data
+    
     mem_limit: 512MB
     cpus: '1.0'
 
-# DUPLICATI BACKUP
-  duplicati:
-    <<: *defaults
-    image: lscr.io/linuxserver/duplicati:amd64-2.2.0
-    container_name: duplicati
-    ports:
-      - "8200:8200"
-    volumes:
-      - ./duplicati:/config
-      - ./backups:/backups
-      - ./media:/source
-    mem_limit: 512MB
-    cpus: '1.0'
 
-# GITEA
-  gitea:
-    <<: *defaults
-    image: gitea/gitea:1
-    container_name: gitea
-    ports:
-      - "3000:3000"
-      - "2222:22"
-    volumes:
-      - ./gitea:/data
-    mem_limit: 512MB
-    cpus: '1.0'
+# # JELLYFIN
+#   jellyfin:
+#     <<: *defaults
+#     image: jellyfin/jellyfin:latest
+#     container_name: jellyfin
+#     ports:
+#       - "8096:8096"
+#     volumes:
+#       - ./jellyfin/config:/config
+#       - ./media:/media  
+#     mem_limit: 1024MB
+#     cpus: '1.0'
+
+# # IMMICH
+#   immich-server:
+#     <<: *defaults
+#     image: ghcr.io/immich-app/immich-server
+#     container_name: immich
+#     ports:
+#       - "2283:2283"
+#     volumes:
+#       - ./immich:/usr/src/app/upload
+#     depends_on:
+#       - immich-db
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+#   immich-db:
+#     <<: *defaults
+#     image: postgres:14
+#     container_name: immich-db
+#     volumes:
+#       - ./immich/immich-db:/var/lib/postgresql/data
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # PIHOLE
+#   pihole:
+#     <<: *defaults
+#     image: pihole/pihole:2026.02.0
+#     container_name: pihole
+#     ports:
+#       - "53:53/tcp"
+#       - "53:53/udp"
+#       - "8081:80"
+#     volumes:
+#       - ./pihole:/etc/pihole
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # WIREGUARD VPN
+#   wireguard:
+#     <<: *defaults
+#     image: linuxserver/wireguard:amd64-latest
+#     container_name: wireguard
+#     cap_add:
+#       - NET_ADMIN
+#     ports:
+#       - "51820:51820/udp"
+#     volumes:
+#       - ./wireguard:/config
+#     mem_limit: 256MB
+#     cpus: '0.5'
+
+# # NGINX PROXY MANAGER
+#   npm:
+#     <<: *defaults
+#     image: jc21/nginx-proxy-manager:2
+#     container_name: nginx-proxy
+#     ports:
+#       - "80:80"
+#       - "81:81"
+#       - "443:443"
+#     volumes:
+#       - ./nginx:/data
+#       - ./letsencrypt:/etc/letsencrypt
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+# # DUPLICATI BACKUP
+#   duplicati:
+#     <<: *defaults
+#     image: lscr.io/linuxserver/duplicati:amd64-2.2.0
+#     container_name: duplicati
+#     ports:
+#       - "8200:8200"
+#     volumes:
+#       - ./duplicati:/config
+#       - ./backups:/backups
+#       - ./media:/source
+#     mem_limit: 512MB
+#     cpus: '1.0'
+
+# # GITEA
+#   gitea:
+#     <<: *defaults
+#     image: gitea/gitea:1
+#     container_name: gitea
+#     ports:
+#       - "3000:3000"
+#       - "2222:22"
+#     volumes:
+#       - ./gitea:/data
+#     mem_limit: 512MB
+#     cpus: '1.0'
 EOL
 EOF
 
@@ -464,6 +569,7 @@ mkdir -p homelab/data/jellyfin
 mkdir -p homelab/data/nextcloud
 mkdir -p homelab/data/uptime-kuma
 mkdir -p homelab/data/portainer
+mkdir -p homelab/data/nextcloud/postgres_nextcloud
 
 mv docker-compose.yml homelab/
 mv .env homelab/
