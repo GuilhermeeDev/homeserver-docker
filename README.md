@@ -1,15 +1,15 @@
 # Homarr installer script
-Script de instalação do Home Server Homarr
+Script de instalação do Home Server Homarr para Ubuntu Server 24.4 LTS
 
 ### Como rodar
-rode a atualização inicial no ubuntu
+rode a atualização inicial no ubuntu Server
 ```
 sudo apt update && sudo apt upgrade -y
 ```
 
-certifique-se de ter o git instalado
+certifique-se de ter o git instalado e openssh-server para configuração remota
 ```
-sudo apt install git -y
+sudo apt install openssh-server git -y
 ```
 
 clone este repositorio
