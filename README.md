@@ -1,4 +1,4 @@
-# 🦀 HomeServer com Docker + Homarr
+# 🦀 Home Server com Docker + Homarr
 
 <div align="center">
     <img src="https://img.shields.io/badge/Ubuntu-E95420?style=flat&logo=ubuntu&logoColor=white"></img>
@@ -61,8 +61,8 @@ sudo apt install openssh-server git -y
 
 clone este repositorio
 ```
-git clone https://github.com/GuilhermeeDev/homarr-installer
-cd homarr-installer
+git clone https://github.com/GuilhermeeDev/homeserver-docker
+cd homeserver-docker
 ```
 
 rode o script de configuração inicial do projeto
@@ -82,7 +82,7 @@ docker compose up
 ---
 
 ## Como acessar?
-A princípio o seu painel de administrador roda por padrão na porta `7575`.
+A princípio o seu painel de administrador roda por padrão na porta `7575` definida no `.env` da raiz do seu servidor.
 
 descubra o ip do seu servidor
 ```bash
