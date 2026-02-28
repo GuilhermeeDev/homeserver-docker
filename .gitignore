@@ -7,3 +7,7 @@ docker-compose.prod.yml
 docker-compose.dev.yml
 docker-compose.test.yml
 docker-compose.local.yml
+homeserver/
+/homeserver
+/env
+env/
