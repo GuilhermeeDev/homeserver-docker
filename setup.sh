@@ -1,21 +1,21 @@
 #!/bin/bash
 
 # --- Instalando Docker ---
-# sudo apt update && sudo apt upgrade -y
-# sudo apt install curl htop ca-certificates curl -y
-# sudo install -m 0755 -d /etc/apt/keyrings
-# sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-# sudo chmod a+r /etc/apt/keyrings/docker.asc
+sudo apt update && sudo apt upgrade -y
+sudo apt install curl htop ca-certificates curl -y
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-# sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
-# Types: deb
-# URIs: https://download.docker.com/linux/ubuntu
-# Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
-# Components: stable
-# Signed-By: /etc/apt/keyrings/docker.asc
-# EOF
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
 
-# sudo apt update && sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+sudo apt update && sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
 # --- Criando ambiente do HomeServer ---
 mkdir -p env
@@ -31,7 +31,7 @@ UPTIME-KUMA_PORT=3001
 NGINX_PROXY_MANAGER_PORT1=80
 NGINX_PROXY_MANAGER_PORT2=81
 NGINX_PROXY_MANAGER_PORT3=443
-FILEBROWSER_PORT=80
+FILEBROWSER_PORT=1200
 EOF
 
 # .ENV DO HOMARR
@@ -42,23 +42,25 @@ TZ=$TZ
 EOF
 
 # .ENV DO PORTAINER
-cat > env/.env.portainer << EOF
+cat > env/env.portainer << EOF
 TZ=$TZ
 EOF
 
 # .ENV DO UPTIME-KUMA
-cat > env/.env.uptime-kuma << EOF
+cat > env/env.uptime-kuma << EOF
 TZ=$TZ
 EOF
 
 # .ENV DO NGINX PROXY MANAGER
-cat > env/.env.nginx-proxy-manager << EOF
+cat > env/env.nginx-proxy-manager << EOF
 TZ=$TZ
 EOF
 
 # .ENV DO FILEBROWSER
-cat > env/.env.fielbrowser << EOF
+cat > env/env.filebrowser << EOF
 TZ=$TZ
+PUID=1000
+PGID=1000
 EOF
 
 # ADICIONANDO O USUARIO AO GRUPO DOCKER PARA EVITAR O USO DE SUDO
@@ -72,6 +74,6 @@ mkdir -p homeserver/media
 mkdir -p homeserver/backups
 
 # COPIANDO CONTEUDO PRINCIPAL DO SERVIDOR PARA A PASTA DO SERVIDOR
-cp docker-compose.yml homeserver/
-cp env/ homeserver/
-cp .env homeserver/
+mv docker-compose.yml homeserver/
+mv env/ homeserver/
+mv .env homeserver/
