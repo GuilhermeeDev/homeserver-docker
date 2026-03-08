@@ -17,19 +17,16 @@ EOF
 
 sudo apt update && sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-# --- Criando ambiente do HomeServer ---
+# --- CRIANDO AMBIENTE DO HOME SERVER ---
 
-TZ=America/Sao_Paulo
-HOMARR_KEY=$(openssl rand -hex 32)
-
-# .ENV DE PORTAS DE SERVIÇOS
+# .ENV DE PORTAS E CREDENCIAIS DE SERVIÇOS 
 cat > .env << EOF
 #VARIAVEIS GLOBAIS
-TZ=$TZ
+TZ=America/Campo_Grande
 
 #HOMARR
 HOMARR_PORT=7575
-SECRET_ENCRYPTION_KEY=$HOMARR_KEY
+SECRET_ENCRYPTION_KEY=$(openssl rand -hex 32)
 HOMARR_PUID=1000
 HOMARR_PGID=1000
 
@@ -49,6 +46,14 @@ FILEBROWSER_PORT=1200
 FILEBROWSER_PUID=1000
 FILEBROWSER_PGID=1000
 FILEBROWSER_USER=$USER
+
+# GITEA
+GITEA_INTERFACE_PORT=3002
+GITEA_SSH_PORT=2223
+GITEA_DATABASE_PORT=5430
+GITEA_DATABASE_NAME=gitea
+GITEA_DATABASE_USER=gitea
+GITEA_DATABASE_PASSWORD=$(openssl rand -hex 32)
 EOF
 
 # ADICIONANDO O USUARIO AO GRUPO DOCKER PARA EVITAR O USO DE SUDO
@@ -56,11 +61,10 @@ sudo usermod -aG docker $USER
 
 # CRIANDO PASTAS DO SERVIDOR
 mkdir -p homeserver
-mkdir -p homeserver/export
 mkdir -p homeserver/data
 mkdir -p homeserver/media
 mkdir -p homeserver/backups
 
 # COPIANDO CONTEUDO PRINCIPAL DO SERVIDOR PARA A PASTA DO SERVIDOR
-mv docker-compose.yml homeserver/
-mv .env homeserver/
+cp docker-compose.yml homeserver/
+cp .env homeserver/
