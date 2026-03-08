@@ -14,6 +14,7 @@
 # - Restart: unless-stopped para todos os serviços
 # - Limites de memória e CPU configurados para cada serviço
 
+# ---- CONFIGURAÇÃO REUTILIZADA ----
 networks:
   homeserver:
     name: homeserver
@@ -31,12 +32,12 @@ x-defaults: &defaults
       max-size: "50MB"
       max-file: "5"
 
-# ---- SERVIÇOS ---- #
+# ---- SERVIÇOS ----
 services:
 # HOMARR
   homarr:
     <<: *defaults
-    image: ghcr.io/homarr-labs/homarr:latest
+    image: ghcr.io/homarr-labs/homarr:v1.54.0
     container_name: homarr
 
     ports:
@@ -133,3 +134,57 @@ services:
 
     mem_limit: 512MB
     cpus: '1.0'
+
+# GITEA
+  gitea:
+    <<: *defaults
+    image: docker.gitea.com/gitea:1.25.4
+    container_name: gitea
+
+    ports:
+      - ${GITEA_INTERFACE_PORT}:3000
+      - ${GITEA_SSH_PORT}:22
+
+    environment:
+      TZ: ${TZ}
+      USER_UID: 1000
+      USER_GID: 1000    
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: gitea_database:5432
+      GITEA__database__NAME: ${GITEA_DATABASE_NAME}
+      GITEA__database__USER: ${GITEA_DATABASE_USER}
+      GITEA__database__PASSWD: ${GITEA_DATABASE_PASSWORD}
+
+    volumes:
+      - ./data/gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    
+    mem_limit: 512MB
+    cpus: '1.0'
+
+    depends_on:
+      - gitea_database
+
+  gitea_database:
+    <<: *defaults
+    image: postgres:16-alpine
+    container_name: gitea_database
+
+    ports:
+      - ${GITEA_DATABASE_PORT}:5432
+
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: ${GITEA_DATABASE_NAME}
+      POSTGRES_USER: ${GITEA_DATABASE_USER}
+      POSTGRES_PASSWORD: ${GITEA_DATABASE_PASSWORD}
+    
+    volumes:
+      - ./data/gitea_database:/var/lib/postgresql/data
+
+    mem_limit: 512MB
+    cpus: '1.0'
+
+# PIHOLE
+# WIREGUARD
