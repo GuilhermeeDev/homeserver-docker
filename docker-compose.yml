@@ -7,9 +7,12 @@
 # - Uptime Kuma
 # - Nginx Proxy Manager 
 # - FileBrowser
+# - Gitea
+# - Pihole 
+# - Wireguard
 
 # -- CONFIGURAÇÕES PADRONIZADAS:
-# - Rede virtual: homeserver (bridge)
+# - Rede virtual: homeserver (bridge) com ipam
 # - Logging: json-file com rotação de logs (max-size: 50MB, max-file: 5)
 # - Restart: unless-stopped para todos os serviços
 # - Limites de memória e CPU configurados para cada serviço
@@ -21,7 +24,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.100.0/24
+        - subnet: ${INTERNAL_SUBNET}
 
 x-defaults: &defaults
   restart: unless-stopped
@@ -46,15 +49,15 @@ services:
     ports:
       - "${HOMARR_PORT}:7575"
 
+    environment:
+      TZ: ${TZ}
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_ENCRYPTION_KEY}
+      PUID: ${HOMARR_PUID}
+      PGID: ${HOMARR_PGID}
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/homarr:/appdata
-
-    environment:
-      - TZ=${TZ}
-      - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_ENCRYPTION_KEY}
-      - PUID=${HOMARR_PUID}
-      - PGID=${HOMARR_PGID}
 
     mem_limit: 512MB
     cpus: '1.0'
