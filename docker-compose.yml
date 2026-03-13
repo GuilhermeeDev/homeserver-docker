@@ -37,6 +37,11 @@ x-defaults: &defaults
     options:
       max-size: "50MB"
       max-file: "5"
+  
+  # security_opt: 
+  #   - no-new-privileges:true
+
+  # init: true
 
 # ---- SERVIÇOS ----
 services:
@@ -56,15 +61,14 @@ services:
       PGID: ${HOMARR_PGID}
 
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - ./data/homarr:/appdata
 
-    mem_limit: 512MB
+    mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${HOMARR_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${HOMARR_IP}
 
 # PORTAINER
   portainer:
@@ -82,12 +86,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/portainer:/data
     
-    mem_limit: 512MB
+    mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${PORTAINER_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${PORTAINER_IP}
 
 # UPTIME-KUMA
   uptime-kuma:
@@ -107,9 +111,9 @@ services:
     mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${UPTIME_KUMA_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${UPTIME_KUMA_IP}
 
 # NGINX PROXY MANAGER
   nginx-proxy:
@@ -129,12 +133,12 @@ services:
       - ./data/nginx-proxy-manager:/data
       - ./data/letsencrypt:/etc/letsencrypt
     
-    mem_limit: 512MB
+    mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${NPM_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${NPM_IP}
 
 # FILEBROWSER
   filebrowser:
@@ -157,9 +161,9 @@ services:
     mem_limit: 512MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${FILEBROWSER_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${FILEBROWSER_IP}
 
 # GITEA
   gitea:
@@ -186,12 +190,12 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     
-    mem_limit: 512MB
+    mem_limit: 412MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${GITEA_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${GITEA_IP}
 
     depends_on:
       - gitea_database
@@ -213,12 +217,12 @@ services:
     volumes:
       - ./data/gitea_database:/var/lib/postgresql/data
 
-    mem_limit: 512MB
+    mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${GITEA_DB_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${GITEA_DB_IP}
 
 # PIHOLE 
   pihole:
@@ -243,51 +247,19 @@ services:
       WEBTHEME: "default-dark"
 
     volumes:
-      - '.data/pihole/etc-pihole:/etc/pihole'
+      - './data/pihole/etc-pihole:/etc/pihole'
       - ./data/pihole/etc-dnsmasq.d:/etc/dnsmasq.d
 
-    mem_limit: 512MB
+    mem_limit: 256MB
     cpus: '1.0'
 
-    networks:
-      homeserver:
-        ipv4_address: ${PIHOLE_IP}
+    # networks:
+    #   homeserver:
+    #     ipv4_address: ${PIHOLE_IP}
 
     cap_add:
       - NET_ADMIN
       - SYS_TIME
       - SYS_NICE
 
-# WIREGUARD
-  wireguard:
-    <<: *defaults
-    image: linuxserver/wireguard:amd64-1.0.20250521
-    container_name: wireguard
-
-    ports:
-      - ${WIREGUARD_PORT}:51820/udp
-
-    environment:
-      TZ: ${TZ}
-      PUID: ${WIREGUARD_PUID}
-      PGID: ${WIREGUARD_PGID}
-      SERVERURL: ${WIREGUARD_URL}
-      SERVERPORT: ${WIREGUARD_PORT}
-      PEERS: 3
-      PEERDNS: auto
-      INTERNAL_SUBNET: ${INTERNAL_SUBNET}
-
-    volumes:
-      - ./data/wireguard/config:/config
-      - ./data/wireguard/lib:/lib/modules:ro
-
-    mem_limit: 512MB
-    cpus: '1.0'
-
-    networks:
-      homeserver:
-        ipv4_address: ${WIREGUARD_IP}
-
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv4.ip_forward=1
+# WG-EASY
