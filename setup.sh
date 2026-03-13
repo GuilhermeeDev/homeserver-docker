@@ -80,12 +80,10 @@ PIHOLE_DNSSEC=true
 PIHOLE_DNS_FQDN_REQUIRED=true
 PIHOLE_DNS_BOGUS_PRIV=true
 
-#WIREGUARD
-WIREGUARD_IP=192.168.100.228
-WIREGUARD_URL=170.83.98.199
-WIREGUARD_PORT=5500
-WIREGUARD_PUID=1000
-WIREGUARD_PGID=1000
+#WG-EASY
+WG_PASSWORD=$(openssl rand -hex 32)
+WG_IP=192.168.100.0
+WG_PORT=51821
 EOF
 
 # ADICIONANDO O USUARIO AO GRUPO DOCKER PARA EVITAR O USO DE SUDO
@@ -98,5 +96,5 @@ mkdir -p homeserver/media
 mkdir -p homeserver/backups
 
 # COPIANDO CONTEUDO PRINCIPAL DO SERVIDOR PARA A PASTA DO SERVIDOR
-cp docker-compose.yml homeserver/
-cp .env homeserver/
+mv docker-compose.yml homeserver/
+mv .env homeserver/
