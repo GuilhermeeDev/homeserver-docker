@@ -1,4 +1,4 @@
-# 🦀 Home Server com Docker + Homarr
+# 🐋 Home Server com Docker & Homarr 🦀
 
 <div align="center">
     <img src="https://img.shields.io/badge/Ubuntu-E95420?style=flat&logo=ubuntu&logoColor=white"></img>
