@@ -25,7 +25,7 @@ Faça um `fork` deste projeto e fique avontade para customizar o seu próprio do
 
 ---
 
-### Serviços Utilizados
+### 🧊 Serviços Utilizados
 
 | Serviço | Função |
 |---------|-------|
@@ -39,7 +39,7 @@ Faça um `fork` deste projeto e fique avontade para customizar o seu próprio do
 | FileBrowser | Gerenciador de arquivos |
 
 ---
-## Como rodar
+### Como rodar
 
 certifique-se de ter o git e openssh-server instalado para configuração remota
 
@@ -68,7 +68,7 @@ docker compose up -d
 
 ---
 
-## Como acessar?
+### Como acessar?
 A princípio o seu painel de administrador `Homarr` roda por padrão na porta `7575` definida no `.env` da raiz do seu servidor.
 
 descubra o ip do seu servidor
