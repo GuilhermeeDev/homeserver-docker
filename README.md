@@ -31,7 +31,7 @@ Faça um `fork` deste projeto e fique avontade para customizar o seu próprio do
 |---------|-------|
 | Homarr | Dashboard do Home Lab |
 | Portainer | Gerenciamento de containers |
-| Nginx Proxy Manager | Reverse Proxy |
+| Nginx Proxy Manager | Proxy Reverso |
 | Uptime Kuma | Monitoramento de uptime |
 | Pihole | DNS e bloqueador de anuncio|
 |Wireguard | VPN |
@@ -41,12 +41,14 @@ Faça um `fork` deste projeto e fique avontade para customizar o seu próprio do
 ---
 ## Como rodar
 
-certifique-se de ter o git instalado e openssh-server para configuração remota
+certifique-se de ter o git e openssh-server instalado para configuração remota
+
 ```
 sudo apt install openssh-server git -y
 ```
 
 clone este repositorio
+
 ```
 git clone https://github.com/GuilhermeeDev/homeserver-docker
 cd homeserver-docker
@@ -61,7 +63,7 @@ rode o script de configuração inicial do projeto
 baixando e subindo os containeres do docker-compose.yml
 
 ```
-docker compose up 
+docker compose up -d 
 ```
 
 ---
