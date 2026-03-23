@@ -25,7 +25,7 @@ Faça um `fork` deste projeto e fique avontade para customizar o seu próprio do
 
 ---
 
-### 🧊 Serviços Utilizados
+### Serviços Utilizados
 
 | Serviço | Função |
 |---------|-------|
